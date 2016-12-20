@@ -11,7 +11,7 @@
 ;R4 <- PWM计数
 ;R5 <- 显示十位
 ;R6 <- 显示个位
-;R7 <-
+;R7 <- 
 ;ISBI <- 蜂鸣器标志位
 ;------------------------------------
 ;-  Generated Initialization File  --
@@ -19,13 +19,15 @@
 $include (C8051F310.inc)
 
 
-        ORG  0000H
-			
+        ORG  0000H		
 RESET:  LJMP  MAIN        	 
         
         ORG  000BH            
         LJMP  INTT0                
         
+		ORG  0013H
+		LJMP  INTX1
+			
 		ORG  001BH
 		LJMP  INTT1
 
@@ -48,13 +50,17 @@ MAIN:
 		MOV  TH1, #0FDH			;节拍为10ms
         SETB  P0.0      		;灭灯           
 		SETB  TR1				
-		SETB  ET1				
-        SETB  EA   				;开T1中断
+		SETB  ET1				;开T1中断
+		SETB  IT1				;下降沿触发
+		SETB  EX1				;开外部中断1
+		SETB  PX1				;设置外部中断1优先级为高
+        SETB  EA   				;开总中断
 		MOV  R2, #00H			;初始亮度等级为0
 		MOV  R3, #00H			;初始时间计数为0
 		MOV  R5, #0				;亮度显示十位为0
 		MOV  R6, #0				;亮度显示个位为0
-HERE:	SJMP  HERE	            ;等待中断
+HERE:	;SJMP  HERE	            ;等待中断
+		
 		
 ;---------------------------------------
 ;定时器0中断，处理PWM定时
@@ -75,47 +81,47 @@ HOME2:  RETI					;退出中断
 ;------------------------------------------
 INTT1:
 		MOV  TL1, #08FH			
-		MOV  TH1, #0FDH			;节拍为10ms
-		INC  R3					;时间计数+1
-		;CJNE R3,#200,CAS1		;判断计时满2S
-		CJNE R3,#100,CAS1		;判断计时满1S
-		MOV  R3,#00H			;若满，计时清0
-		CJNE R2,#0,CAS16		;判断当前亮度等级为0
-		CLR F0					;递减标志位置0
+		MOV  TH1, #0FDH			;
+		INC  R3					;
+		;CJNE R3,#200,CAS1		;
+		CJNE R3,#60,CAS1		;
+		MOV  R3,#00H			;
+		CJNE R2,#0,CAS16		;
+		CLR F0					;
 		AJMP CAS2				;
-CAS16:	;CJNE R2,#15,CAS2		;判断当前亮度等级满15
-		CJNE R2,#31,CAS2		;判断当前亮度等级满31
-		SETB F0					;递减标志位置1
+CAS16:	;CJNE R2,#15,CAS2		;
+		CJNE R2,#31,CAS2		;
+		SETB F0					;
 		AJMP CAS2				;
-;--计数--
-CAS2:	JB   F0,SU				;F0为1则跳转到递减
+;--神奇勿动--
+CAS2:	JB   F0,SU				;
 		INC  R2
-		INC  R6					;递增计数
-		;CJNE R2,#15,CAS4		;下一个亮度等级是15
-		CJNE R2, #31,CAS4		;下一个亮度等级是31
-		SETB ISBI				;响铃
-CAS4:	CJNE R6, #0AH,HOME1		;个位计数到10
-		MOV  R6, #0				;个位置0
-		;MOV  R5, #1			;十位置1
-		INC  R5					;十位+1
+		INC  R6					;
+		;CJNE R2,#15,CAS4		;
+		CJNE R2, #31,CAS4		;
+		SETB ISBI				;
+CAS4:	CJNE R6, #0AH,HOME1		;
+		MOV  R6, #0				;
+		;MOV  R5, #1			;
+		INC  R5					;
 		AJMP HOME1
-SU:		DEC  R2					;递减计数
+SU:		DEC  R2					;
 		DEC  R6
-		CJNE R2,#0,CAS5			;下一个亮度等级是0
-		SETB ISBI				;响铃
-CAS5:	CJNE R6,#0FFH,HOME1		;个位计到-1
-		MOV  R6,#9				;个位置9
-		;MOV  R5,#0				;十位置0
-		DEC  R5					;十位-1
+		CJNE R2,#0,CAS5			;
+		SETB ISBI				;
+CAS5:	CJNE R6,#0FFH,HOME1		;
+		MOV  R6,#9				;
+		;MOV  R5,#0				;
+		DEC  R5					;
 		AJMP HOME1
-CAS1:	JB   ISBI,CAS3			;判断蜂鸣器是不是在响
-		AJMP HOME1				;没响就算了
-CAS3:	CJNE R3,#50,HOME1		;在响就判断是否满0.5s
-		CLR  ISBI				;是就关上蜂鸣器
-HOME1:	LCALL PWM				;亮灯
-		LCALL  PLAY				;显示当前亮度等级
+CAS1:	JB   ISBI,CAS3			;
+		AJMP HOME1				;
+CAS3:	CJNE R3,#50,HOME1		;
+		CLR  ISBI				;
+HOME1:	LCALL KEYM
+		LCALL PWM				;
+		LCALL  PLAY				;
 		RETI
-
 ;------------------------------------------
 ;PWM
 ;------------------------------------------
@@ -136,7 +142,8 @@ HOME3:	;MOV  TL0, #0D9H		;如果不为0
 ;-------------------------------------------
 ;DISPLAY
 ;-------------------------------------------
-PLAY:	JB ISTEN,TEN			;如果正在显示十位
+PLAY:	JNB TR1,HOM
+		JB ISTEN,TEN			;如果正在显示十位
 		CLR P0.6				;就开始显示个位
 		MOV A,R6
 		MOVC A,@A+DPTR			;取个位字码
@@ -148,11 +155,35 @@ TEN:	SETB P0.6				;开始显示十位
 		MOVC A,@A+DPTR			;取十位字码
 		MOV P1,A				;显示
 		CPL ISTEN				;标志位取反
-		RET
+HOM:	RET
 
 TAB:	DB 0FCH,060H,0DAH,0F2H,066H
 		DB 0B6H,0BEH,0E0H,0FEH,0F6H
 		
+;------------------------------------------
+;外部中断：熄灯键按下
+;------------------------------------------
+INTX1:	LCALL DELAY
+		JB   P0.1,X1
+		CPL  TR1	
+		MOV  P1,#00H
+		SETB P0.0
+X1:		RETI
+;------------------------------------------
+;DELAY
+;------------------------------------------
+DELAY:	MOV R0,#054H
+DL:		MOV R1,#0FFH
+DL0:	DJNZ R1,DL0
+		DJNZ R0,DL
+		RET
+		
+;-------------------------------------------
+;KEYM
+;-------------------------------------------
+KEYM:	RET
+
+
 ;------------------------------------------
 ;系统初始化函数
 ;------------------------------------------
@@ -201,7 +232,7 @@ Port_IO_Init:
 
 Interrupts_Init:
     mov  IT01CF,    #010h
-    mov  IE,        #00Ah
+    mov  IE,        #00Eh
     ret
 
 ; Initialization function for device,
