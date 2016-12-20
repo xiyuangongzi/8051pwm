@@ -4,14 +4,15 @@
 ;Designed_by:
 ;CPU:8051F310
 ;主频：24.5MHz
-;R0 <- DPH
-;R1 <- DPL
-;R2
-;R3 <- 2S
-;R4
-;R5
-;R6
-;R7
+;R0 <- 
+;R1 <- 
+;R2 <- 亮度等级
+;R3 <- 两秒
+;R4 <- PWM计数
+;R5 <- 显示十位
+;R6 <- 显示个位
+;R7 <-
+;ISBI <- 蜂鸣器标志位
 ;------------------------------------
 ;-  Generated Initialization File  --
 ;------------------------------------
@@ -19,6 +20,7 @@ $include (C8051F310.inc)
 
 
         ORG  0000H
+			
 RESET:  LJMP  MAIN        	 
         
         ORG  000BH            
@@ -31,90 +33,128 @@ RESET:  LJMP  MAIN
 ;-  主函数
 ;-------------------------------------
         ORG   0100H
-MAIN:   LCALL  Init_Device
-        MOV   SP, #60H	           
-        MOV   R3, #00H	
-	    MOV   TMOD, #11H
-        MOV   DPTR, #PWM0
-        ;SETB  P3.1
-		MOV  TL1, #0EEH
-		MOV  TH1, #85H
-        CLR  P0.0                 
-		SETB  TR0  	           
-        SETB  ET0
-		SETB  TR1
-		SETB  ET1
-        SETB  EA                  
-HERE:   SJMP  HERE	            
-
+MAIN:   
+		LCALL  Init_Device		;系统初始化
+		ISBI BIT P3.1			;定义蜂鸣器标志位
+		CLR  ISBI				;蜂鸣器关上
+		ISTEN BIT PSW.1			;定义是否正在显示十位标志位
+		CLR  ISTEN				;初始化为0
+		MOV  P1,#00H			;数码管显示清零
+		CLR  P0.7				;数码管位选初始化
+		MOV  SP, #60H			;堆栈初始化	
+		MOV  DPTR,#TAB			;显示码表
+	    MOV  TMOD, #11H			;计时器都工作在方式1
+		MOV  TL1, #08FH			
+		MOV  TH1, #0FDH			;节拍为10ms
+        SETB  P0.0      		;灭灯           
+		SETB  TR1				
+		SETB  ET1				
+        SETB  EA   				;开T1中断
+		MOV  R2, #00H			;初始亮度等级为0
+		MOV  R3, #00H			;初始时间计数为0
+		MOV  R5, #0				;亮度显示十位为0
+		MOV  R6, #0				;亮度显示个位为0
+HERE:	SJMP  HERE	            ;等待中断
+		
 ;---------------------------------------
-;定时器0中断处理函数
+;定时器0中断，处理PWM定时
 ;---------------------------------------
-INTT0:  JB P0.0,ISLOW
-ISHIGH: MOV  A, #00H
-		MOVC  A,@A+DPTR
-		MOV  TH0,A
-		MOV  A,#01H
-		MOVC  A,@A+DPTR
-        MOV  TL0,A   
-        CPL  P0.0
-		AJMP  L1
-ISLOW:	MOV  A,#02H
-		MOVC  A,@A+DPTR
-		MOV  TL0,A 
-		MOV  A,#03H
-		MOVC  A,@A+DPTR
-        MOV  TH0,A 
-        CPL  P0.0                         
-L1:     RETI
+INTT0:  CJNE R4,#0,L1			;亮灯剩余时间是否为0
+		SETB  P0.0				;是则关灯
+		CLR  TR0				;关中断
+		AJMP HOME2				;退出
+L1:		DEC R4					;不为0则减一
+		;MOV  TL0, #0D9H			
+		;MOV  TH0, #0FFH		;重新置数(10/15)ms
+		MOV  TL0, #0ECH
+		MOV  TH0, #0FFH			;重新置数(10/31)ms
+HOME2:  RETI					;退出中断
 
 ;------------------------------------------
-;定时器1中断处理函数
+;定时器1中断处理：任务调度
 ;------------------------------------------
-INTT1:	MOV  TL1,#0EEH
-		MOV  TH1,#85H    ;0.5S
-		CJNE  R3,#03H,INCR3 ;2S
-		MOV  R3,#00H
-		MOV  A,#01H
-		MOVC  A,@A+DPTR    ;;这里会不会冲突？？？
-		CJNE  A,#0F0H,INCDP
-		MOV  DPTR,#PWM0
-		AJMP  BACK1
-INCDP:	INC  DPTR
-		INC  DPTR
-		INC  DPTR
-		INC  DPTR	;+4
-		AJMP  BACK1
-INCR3:	INC  R3
-BACK1:	RETI
+INTT1:
+		MOV  TL1, #08FH			
+		MOV  TH1, #0FDH			;节拍为10ms
+		INC  R3					;时间计数+1
+		;CJNE R3,#200,CAS1		;判断计时满2S
+		CJNE R3,#100,CAS1		;判断计时满1S
+		MOV  R3,#00H			;若满，计时清0
+		CJNE R2,#0,CAS16		;判断当前亮度等级为0
+		CLR F0					;递减标志位置0
+		AJMP CAS2				;
+CAS16:	;CJNE R2,#15,CAS2		;判断当前亮度等级满15
+		CJNE R2,#31,CAS2		;判断当前亮度等级满31
+		SETB F0					;递减标志位置1
+		AJMP CAS2				;
+;--计数--
+CAS2:	JB   F0,SU				;F0为1则跳转到递减
+		INC  R2
+		INC  R6					;递增计数
+		;CJNE R2,#15,CAS4		;下一个亮度等级是15
+		CJNE R2, #31,CAS4		;下一个亮度等级是31
+		SETB ISBI				;响铃
+CAS4:	CJNE R6, #0AH,HOME1		;个位计数到10
+		MOV  R6, #0				;个位置0
+		;MOV  R5, #1			;十位置1
+		INC  R5					;十位+1
+		AJMP HOME1
+SU:		DEC  R2					;递减计数
+		DEC  R6
+		CJNE R2,#0,CAS5			;下一个亮度等级是0
+		SETB ISBI				;响铃
+CAS5:	CJNE R6,#0FFH,HOME1		;个位计到-1
+		MOV  R6,#9				;个位置9
+		;MOV  R5,#0				;十位置0
+		DEC  R5					;十位-1
+		AJMP HOME1
+CAS1:	JB   ISBI,CAS3			;判断蜂鸣器是不是在响
+		AJMP HOME1				;没响就算了
+CAS3:	CJNE R3,#50,HOME1		;在响就判断是否满0.5s
+		CLR  ISBI				;是就关上蜂鸣器
+HOME1:	LCALL PWM				;亮灯
+		LCALL  PLAY				;显示当前亮度等级
+		RETI
 
 ;------------------------------------------
 ;PWM
 ;------------------------------------------
-;		DB TH0L,TL0L,TH0H,TL0H
-PWM0:	DB 0FFH,0FFH,0FFH,0F0H
-PWM1:	DB 0FFH,0FEH,0FFH,0F1H
-PWM2:	DB 0FFH,0FDH,0FFH,0F2H
-PWM3:	DB 0FFH,0FCH,0FFH,0F3H
-PWM4:	DB 0FFH,0FBH,0FFH,0F4H
-PWM5:	DB 0FFH,0FAH,0FFH,0F5H
-PWM6:	DB 0FFH,0F9H,0FFH,0F6H
-PWM7:	DB 0FFH,0F8H,0FFH,0F7H
-PWM8:	DB 0FFH,0F7H,0FFH,0F8H
-PWM9:	DB 0FFH,0F6H,0FFH,0F9H
-PWMA:	DB 0FFH,0F5H,0FFH,0FAH
-PWMB:	DB 0FFH,0F4H,0FFH,0FBH
-PWMC:	DB 0FFH,0F3H,0FFH,0FCH
-PWMD:	DB 0FFH,0F2H,0FFH,0FDH
-PWME:	DB 0FFH,0F1H,0FFH,0FEH
-PWMF:	DB 0FFH,0F0H,0FFH,0FFH
+PWM:	CJNE R2,#0,HOME3		;如果亮度等级为0
+		CLR  TR0				;就不开中断不开灯
+		RET						;退出
+HOME3:	;MOV  TL0, #0D9H		;如果不为0
+		;MOV  TH0, #0FFH		;定时(10/15)ms  
+		MOV  TL0, #0ECH
+		MOV  TH0, #0FFH			;定时(10/31)ms
+		MOV  B,R2
+		MOV  R4,B				;R4为亮的时间
+		SETB  TR0
+		SETB  ET0				;开T0中断
+		CLR   P0.0				;开灯
+		RET
+		
+;-------------------------------------------
+;DISPLAY
+;-------------------------------------------
+PLAY:	JB ISTEN,TEN			;如果正在显示十位
+		CLR P0.6				;就开始显示个位
+		MOV A,R6
+		MOVC A,@A+DPTR			;取个位字码
+		MOV P1,A				;显示
+		CPL ISTEN				;标志位取反
+		RET
+TEN:	SETB P0.6				;开始显示十位
+		MOV A,R5				
+		MOVC A,@A+DPTR			;取十位字码
+		MOV P1,A				;显示
+		CPL ISTEN				;标志位取反
+		RET
 
-
-
-
-
+TAB:	DB 0FCH,060H,0DAH,0F2H,066H
+		DB 0B6H,0BEH,0E0H,0FEH,0F6H
+		
 ;------------------------------------------
-;初始化函数
+;系统初始化函数
 ;------------------------------------------
 public  Init_Device
 
@@ -129,7 +169,7 @@ PCA_Init:
     ret
 
 Timer_Init:
-    mov  TMOD,      #001h
+    mov  TMOD,      #011h
     mov  CKCON,     #002h
     ret
 
@@ -161,7 +201,7 @@ Port_IO_Init:
 
 Interrupts_Init:
     mov  IT01CF,    #010h
-    mov  IE,        #086h
+    mov  IE,        #00Ah
     ret
 
 ; Initialization function for device,
