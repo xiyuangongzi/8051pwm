@@ -39,6 +39,7 @@ MAIN:
 		LCALL  Init_Device		;系统初始化
 		ISBI BIT P3.1			;定义蜂鸣器标志位
 		CLR  ISBI				;蜂鸣器关上
+		MOV  P3,#00H
 		ISTEN BIT PSW.1			;定义是否正在显示十位标志位
 		CLR  ISTEN				;初始化为0
         KEYED BIT 00H           ;
@@ -46,6 +47,7 @@ MAIN:
 		SET10 BIT 02H
 		SET20 BIT 03H
 		SET30 BIT 04H
+		FAST  BIT 05H
         ROW  EQU 7AH
         LIN  EQU 7BH
         BUFF EQU 7CH
@@ -59,6 +61,7 @@ MAIN:
 		CLR  SET10
 		CLR  SET20
 		CLR  SET30
+		CLR  FAST
 		MOV  P1,#00H			;数码管显示清零
 		CLR  P0.7				;数码管位选初始化
 		MOV  SP, #50H			;堆栈初始化	
@@ -272,71 +275,199 @@ TAB2:   AJMP    ANN0
 ;-------------------------------------------
 ;按键处理程序
 ;-------------------------------------------
-ANN0:   
-		MOV  R2, #00H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #0				
+ANN0:   MOV  R3, #00H
+		MOV  R6, #0
+		JNB SET10,TO200
+		MOV  R2, #0AH
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO200:  JNB SET20,TO300
+		MOV  R2, #014H
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO300:  JNB SET30,TO000
+		MOV  R2, #01EH
+		MOV  R5, #3
+		CLR  SET30
+		AJMP BACT5
+TO000:	MOV  R2, #00H
+		MOV  R5, #0
+		AJMP BACT5
+ANN1:   MOV  R3, #00H
+		MOV  R6, #1
+		JNB SET10,TO201
+		MOV  R2, #0bH
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO201:  JNB SET20,TO301
+		MOV  R2, #015H
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO301:  JNB SET30,TO001
+		MOV  R2, #01fH
+		MOV  R5, #3
+		CLR  SET30
+		AJMP BACT5
+TO001:	MOV  R2, #01H
+		MOV  R5, #0
+		AJMP BACT5
+ANN2:   MOV  R3, #00H
+		MOV  R6, #2
+		JNB SET10,TO202
+		MOV  R2, #0cH
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO202:  JNB SET20,TO302
+		MOV  R2, #016H
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO302:  JNB SET30,TO002
+		CLR  SET30
+TO002:	MOV  R2, #02H
+		MOV  R5, #0
+		AJMP BACT5
+ANN3:   MOV  R3, #00H
+		MOV  R6, #3
+		JNB SET10,TO203
+		MOV  R2, #0dH
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO203:  JNB SET20,TO303
+		MOV  R2, #017H
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO303:  JNB SET30,TO003
+		CLR  SET30
+TO003:	MOV  R2, #03H
+		MOV  R5, #0
+		AJMP BACT5
+ANN4:   MOV  R3, #00H
+		MOV  R6, #4
+		JNB SET10,TO204
+		MOV  R2, #0eH
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO204:  JNB SET20,TO304
+		MOV  R2, #018H
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO304:  JNB SET30,TO004
+		CLR  SET30
+TO004:	MOV  R2, #04H
+		MOV  R5, #0
+		AJMP BACT5
+ANN5:   MOV  R3, #00H
+		MOV  R6, #5
+		JNB SET10,TO205
+		MOV  R2, #0fH
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO205:  JNB SET20,TO305
+		MOV  R2, #019H
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO305:  JNB SET30,TO005
+		CLR  SET30
+TO005:	MOV  R2, #05H
+		MOV  R5, #0
+		AJMP BACT5
+ANN6:   MOV  R3, #00H
+		MOV  R6, #6
+		JNB SET10,TO206
+		MOV  R2, #010H
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO206:  JNB SET20,TO306
+		MOV  R2, #01aH
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO306:  JNB SET30,TO006
+		CLR  SET30
+TO006:	MOV  R2, #06H
+		MOV  R5, #0
+		AJMP BACT5
+ANN7:   MOV  R3, #00H
+		MOV  R6, #7
+		JNB SET10,TO207
+		MOV  R2, #011H
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO207:  JNB SET20,TO307
+		MOV  R2, #01bH
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO307:  JNB SET30,TO007
+		CLR  SET30
+TO007:	MOV  R2, #07H
+		MOV  R5, #0
+		AJMP BACT5
+ANN8:   MOV  R3, #00H
+		MOV  R6, #8
+		JNB SET10,TO208
+		MOV  R2, #012H
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO208:  JNB SET20,TO308
+		MOV  R2, #01cH
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO308:  JNB SET30,TO008
+		CLR  SET30
+TO008:	MOV  R2, #08H
+		MOV  R5, #0
+		AJMP BACT5
+ANN9:   MOV  R3, #00H
+		MOV  R6, #9
+		JNB SET10,TO209
+		MOV  R2, #013H
+		MOV  R5, #1
+		CLR  SET10
+		AJMP BACT5
+TO209:  JNB SET20,TO309
+		MOV  R2, #01dH
+		MOV  R5, #2
+		CLR  SET20
+		AJMP BACT5
+TO309:  JNB SET30,TO009
+		CLR  SET30
+TO009:	MOV  R2, #09H
+		MOV  R5, #0
+		AJMP BACT5
+
+ANNA:   SETB SET10
         AJMP BACT5
-ANN1:   MOV  R2, #01H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #1				
+ANNB:   SETB SET20
         AJMP BACT5
-ANN2:   MOV  R2, #02H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #2				
+ANNC:   SETB SET30
         AJMP BACT5
-ANN3:   MOV  R2, #03H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #3				
+ANND:   SETB F0
         AJMP BACT5
-ANN4:   MOV  R2, #04H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #4				
+ANNE:   CLR  F0
         AJMP BACT5
-ANN5:   MOV  R2, #05H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #5				
-        AJMP BACT5
-ANN6:   MOV  R2, #06H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #6				
-        AJMP BACT5
-ANN7:   MOV  R2, #07H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #7				
-        AJMP BACT5
-ANN8:   MOV  R2, #08H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #8				
-        AJMP BACT5
-ANN9:   MOV  R2, #09H
-		MOV  R3, #00H			
-		MOV  R5, #0				
-		MOV  R6, #9				
-        AJMP BACT5
-ANNA:   AJMP BACT5
-ANNB:   AJMP BACT5
-ANNC:   AJMP BACT5
-ANND:   MOV A,TIME
-        ADD A,#20
-        MOV TIME,A
-        AJMP BACT5
-ANNE:   MOV A,TIME
-        CLR C
-        SUBB A,#20
-        MOV TIME,A
-        AJMP BACT5
-ANNF:   SETB ISBI
-        AJMP BACT5
+ANNF:   CPL FAST
+		JB  FAST,ANFK
+ANFM:   MOV TIME,#200
+		AJMP BACT5
+ANFK:   MOV TIME,#60
+		AJMP BACT5
 ;-------------------------------------------
 ;KEYAM：判断是否有键按下
 ;-------------------------------------------
