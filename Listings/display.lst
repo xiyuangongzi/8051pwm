@@ -1,0 +1,27 @@
+A51 MACRO ASSEMBLER  DISPLAY                                                              12/19/2016 11:55:08 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.02c
+OBJECT MODULE PLACED IN .\Objects\display.obj
+ASSEMBLER INVOKED BY: D:\pros\keil\C51\BIN\A51.EXE display.asm NOMOD51 SET(SMALL) DEBUG PRINT(.\Listings\display.lst) OB
+                      JECT(.\Objects\display.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     
+                       2     
+*** WARNING #A41 IN 2 (display.asm, LINE 2): MISSING 'END' STATEMENT
+A51 MACRO ASSEMBLER  DISPLAY                                                              12/19/2016 11:55:08 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  1 WARNING(S), 0 ERROR(S)

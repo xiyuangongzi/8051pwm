@@ -1,0 +1,26 @@
+A51 MACRO ASSEMBLER  BUTTON                                                               12/19/2016 11:55:08 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.02c
+OBJECT MODULE PLACED IN .\Objects\button.obj
+ASSEMBLER INVOKED BY: D:\pros\keil\C51\BIN\A51.EXE button.asm NOMOD51 SET(SMALL) DEBUG PRINT(.\Listings\button.lst) OBJE
+                      CT(.\Objects\button.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     
+*** WARNING #A41 IN 1 (button.asm, LINE 1): MISSING 'END' STATEMENT
+A51 MACRO ASSEMBLER  BUTTON                                                               12/19/2016 11:55:08 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  1 WARNING(S), 0 ERROR(S)
